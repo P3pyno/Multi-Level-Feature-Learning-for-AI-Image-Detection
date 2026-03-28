@@ -127,8 +127,7 @@ def dct_block_features(img, block=8):
     H = h - (h % block)
     W = w - (w % block)
     x = img[:H, :W]
-    feats["dct_skew"]     = float(skew(coeffs))
-    feats["dct_kurt"]     = float(kurtosis(coeffs, fisher=True))
+
     coeffs = []
     lowE = 0.0
     highE = 0.0
@@ -136,7 +135,7 @@ def dct_block_features(img, block=8):
 
     for y in range(0, H, block):
         for x0 in range(0, W, block):
-            b = x[y:y+block, x0:x0+block]
+            b = x[y:y + block, x0:x0 + block]
             C = dct2(b)
             # exclude DC for coefficient stats
             c = C.flatten()
@@ -145,24 +144,27 @@ def dct_block_features(img, block=8):
 
             # energy bands: low freq = top-left 4x4 (excluding DC), high = rest
             low = C[:4, :4].copy()
-            low[0,0] = 0.0
+            low[0, 0] = 0.0
             high = C.copy()
             high[:4, :4] = 0.0
 
-            e_low  = float(np.sum(low * low))
+            e_low = float(np.sum(low * low))
             e_high = float(np.sum(high * high))
-            e_tot  = float(np.sum(C * C))
+            e_tot = float(np.sum(C * C))
             lowE += e_low
             highE += e_high
             totalE += e_tot
 
     coeffs = np.concatenate(coeffs, axis=0).astype(np.float32)
+    s = skew(coeffs)
+    k = kurtosis(coeffs, fisher=True)
+
     feats = {}
     feats["dct_abs_mean"] = float(np.mean(np.abs(coeffs)))
-    feats["dct_abs_std"]  = float(np.std(np.abs(coeffs)))
+    feats["dct_abs_std"] = float(np.std(np.abs(coeffs)))
     feats["dct_skew"] = float(s) if np.isfinite(s) else 0.0
     feats["dct_kurt"] = float(k) if np.isfinite(k) else 0.0
-    feats["dct_lowE_ratio"]  = float(lowE  / (totalE + 1e-8))
+    feats["dct_lowE_ratio"] = float(lowE / (totalE + 1e-8))
     feats["dct_highE_ratio"] = float(highE / (totalE + 1e-8))
     return feats
 
