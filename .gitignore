@@ -1,0 +1,11 @@
+data/
+temp/
+logs/
+embeddings/
+features/
+__pycache__/
+*.npy
+*.parquet
+*.csv
+*.joblib
+*.pyc
