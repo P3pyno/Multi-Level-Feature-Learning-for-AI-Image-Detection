@@ -1,29 +1,43 @@
-import os
+import argparse
+from pathlib import Path
+
 from datasets import load_from_disk
 from tqdm import tqdm
 
-ARROW_DATASET_DIR = "/data/adam/datasets/AI-Generated-vs-Real-Images-Datasets/temp/train"
+from scripts.project_paths import DATA_DIR, TEMP_TRAIN_DIR
 
-EXPORT_DIR = "/data/adam/datasets/AI-Generated-vs-Real-Images-Datasets/data"
 
-ai_dir = os.path.join(EXPORT_DIR, "ai")
-real_dir = os.path.join(EXPORT_DIR, "real")
+def main(arrow_dataset_dir, export_dir):
+    arrow_dataset_dir = Path(arrow_dataset_dir)
+    export_dir = Path(export_dir)
 
-os.makedirs(ai_dir, exist_ok=True)
-os.makedirs(real_dir, exist_ok=True)
+    ai_dir = export_dir / "ai"
+    real_dir = export_dir / "real"
 
-dataset = load_from_disk(ARROW_DATASET_DIR)
+    ai_dir.mkdir(parents=True, exist_ok=True)
+    real_dir.mkdir(parents=True, exist_ok=True)
 
-print(dataset)
-print(dataset.features)
+    dataset = load_from_disk(str(arrow_dataset_dir))
 
-saved = 0
+    print(dataset)
+    print(dataset.features)
 
-for i, example in enumerate(tqdm(dataset, desc="Extracting")):
-    label = int(example["label"])
-    save_dir = real_dir if label == 1 else ai_dir
+    saved = 0
+    for i, example in enumerate(tqdm(dataset, desc="Extracting")):
+        label = int(example["label"])
+        # label convention in this dataset: 0=AI, 1=real
+        save_dir = ai_dir if label == 0 else real_dir
 
-    example["image"].save(os.path.join(save_dir, f"{i}.png"))
-    saved += 1
+        example["image"].save(save_dir / f"{i}.png")
+        saved += 1
 
-print(f"✅ Extracted {saved} images to {EXPORT_DIR}")
+    print(f"✅ Extracted {saved} images to {export_dir}")
+
+
+if __name__ == "__main__":
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--arrow-dataset", type=str, default=str(TEMP_TRAIN_DIR))
+    ap.add_argument("--out", type=str, default=str(DATA_DIR))
+    args = ap.parse_args()
+
+    main(args.arrow_dataset, args.out)
