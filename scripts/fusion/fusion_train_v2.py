@@ -14,7 +14,6 @@ from scripts.project_paths import (
     BRANCH2_FEATURES_CSV,
     BRANCH2_CNN_FEATURES_PARQUET,
     BRANCH3_FEATURES_V2_PARQUET,
-    BRANCH4_FEATURES_CSV,
     FUSION_V2_MODEL,
     GLOBAL_SPLIT_JSON,
 )
@@ -26,7 +25,6 @@ BRANCH1_PATH = BRANCH1_FEATURES_CLEAN_CSV
 BRANCH2A_PATH = BRANCH2_FEATURES_CSV
 BRANCH2B_PATH = BRANCH2_CNN_FEATURES_PARQUET
 BRANCH3_PATH = BRANCH3_FEATURES_V2_PARQUET
-BRANCH4_PATH = BRANCH4_FEATURES_CSV
 OUT_MODEL = FUSION_V2_MODEL
 USE_BRANCH_GATING = True
 
@@ -103,7 +101,13 @@ def main(classifier_type="logreg"):
     pipe = Pipeline([
         ("imputer", SimpleImputer(strategy="median")),
         ("scaler", StandardScaler()),
-        ("clf", build_classifier(classifier_type))
+        ("clf", SGDClassifier(
+            loss="log_loss",
+            max_iter=80,
+            tol=1e-3,
+            random_state=42,
+            verbose=1
+        ))
     ])
 
     pipe.fit(X_train, y_train)
@@ -129,8 +133,4 @@ def main(classifier_type="logreg"):
 
 
 if __name__ == "__main__":
-    import argparse
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--classifier", choices=["logreg", "mlp"], default="logreg")
-    args = ap.parse_args()
-    main(classifier_type=args.classifier)
+    main()
