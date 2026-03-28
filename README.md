@@ -67,6 +67,11 @@ python scripts/project_paths.py
    python -m scripts.fusion.fusion_train
    python -m scripts.fusion.fusion_train_v2
    ```
+   Optional classifier selection:
+   ```bash
+   python -m scripts.fusion.fusion_train --classifier mlp
+   python -m scripts.fusion.fusion_train_v2 --classifier mlp
+   ```
 
 ## Reproducibility note
 
@@ -77,6 +82,13 @@ All training scripts now reuse a shared global split file at `splits/global_path
 Run full multi-branch fusion prediction on a single image:
 
 ```bash
+python -m scripts.predict /path/to/image.jpg --mode fusion --fusion-version v1
+```
+
+Fusion-v2 inference:
+
+```bash
+python -m scripts.predict /path/to/image.jpg --mode fusion --fusion-version v2
 python -m scripts.predict /path/to/image.jpg --mode fusion --fusion-model models/fusion/fusion_sgd.joblib --branch3-model models/branch3/branch3_semantic_lr.joblib
 ```
 

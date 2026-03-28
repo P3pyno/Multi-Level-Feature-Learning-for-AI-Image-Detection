@@ -5,6 +5,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import SGDClassifier
+from sklearn.neural_network import MLPClassifier
 from sklearn.metrics import accuracy_score, roc_auc_score, classification_report, confusion_matrix
 
 from scripts.project_paths import (
@@ -35,7 +36,13 @@ def prefix_features(df, prefix):
     return df.rename(columns={c: f"{prefix}{c}" for c in feat_cols})
 
 
-def main():
+def build_classifier(classifier_type):
+    if classifier_type == "mlp":
+        return MLPClassifier(hidden_layer_sizes=(128,), activation="relu", max_iter=500, random_state=42)
+    return SGDClassifier(loss="log_loss", max_iter=80, tol=1e-3, random_state=42, verbose=1)
+
+
+def main(classifier_type="logreg"):
     print("Loading Branch 1...", flush=True)
     b1 = prefix_features(pd.read_csv(BRANCH1_PATH), "b1_")
     print("Branch 1 shape:", b1.shape, flush=True)
