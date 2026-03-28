@@ -1,5 +1,6 @@
 import pandas as pd
 import joblib
+from pathlib import Path
 
 from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer
@@ -59,10 +60,18 @@ def main(classifier_type="logreg"):
     b3 = prefix_features(pd.read_parquet(BRANCH3_PATH), "b3_")
     print("Branch 3 shape:", b3.shape, flush=True)
 
+    b4 = None
+    if Path(BRANCH4_PATH).exists():
+        print("Loading Branch 4 consistency features...", flush=True)
+        b4 = prefix_features(pd.read_csv(BRANCH4_PATH), "b4_")
+        print("Branch 4 shape:", b4.shape, flush=True)
+
     print("Merging all branches...", flush=True)
     df = b1.merge(b2a, on=["path", "label"], how="inner")
     df = df.merge(b2b, on=["path", "label"], how="inner")
     df = df.merge(b3, on=["path", "label"], how="inner")
+    if b4 is not None:
+        df = df.merge(b4, on=["path", "label"], how="inner")
 
     print("Merged shape:", df.shape, flush=True)
 
