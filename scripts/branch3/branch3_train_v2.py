@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 import joblib
 
-from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
@@ -16,7 +15,9 @@ from scripts.project_paths import (
     BRANCH3_CLIP_V2_META_CSV,
     BRANCH3_SEMANTIC_V2_MODEL,
     BRANCH3_FEATURES_V2_PARQUET,
+    GLOBAL_SPLIT_JSON,
 )
+from scripts.split_utils import get_or_create_global_path_split
 
 GLOBAL_PATH = BRANCH3_CLIP_V2_GLOBAL_NPY
 QUAD_PATH = BRANCH3_CLIP_V2_QUADS_NPY
@@ -122,10 +123,9 @@ def main():
     quad_emb = l2_normalize(quad_emb)
 
     y = meta["label"].values
-    idx = np.arange(len(y))
-
-    train_idx, test_idx = train_test_split(
-        idx, test_size=0.2, random_state=42, stratify=y
+    paths = meta["path"].values
+    train_idx, test_idx = get_or_create_global_path_split(
+        paths=paths, labels=y, split_path=GLOBAL_SPLIT_JSON, test_size=0.2, random_state=42
     )
 
     g_train, g_test = global_emb[train_idx], global_emb[test_idx]
@@ -165,8 +165,7 @@ def main():
     print("\nSaved model:", OUT_MODEL, flush=True)
 
     print("\nSaving full Branch 3 v2 feature file...", flush=True)
-    ref_all = fit_real_reference(global_emb[y == 0], k=5)
-    X_all = semantic_features(global_emb, quad_emb, ref_all)
+    X_all = semantic_features(global_emb, quad_emb, ref)
 
     df = meta.copy()
     cols = [
