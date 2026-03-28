@@ -89,6 +89,7 @@ Fusion-v2 inference:
 
 ```bash
 python -m scripts.predict /path/to/image.jpg --mode fusion --fusion-version v2
+python -m scripts.predict /path/to/image.jpg --mode fusion --fusion-model models/fusion/fusion_sgd.joblib --branch3-model models/branch3/branch3_semantic_lr.joblib
 ```
 
 Or run Branch-1 only:

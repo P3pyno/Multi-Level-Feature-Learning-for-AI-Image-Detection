@@ -92,7 +92,13 @@ def main(classifier_type="logreg"):
     pipe = Pipeline([
         ("imputer", SimpleImputer(strategy="median")),
         ("scaler", StandardScaler()),
-        ("clf", build_classifier(classifier_type))
+        ("clf", SGDClassifier(
+            loss="log_loss",
+            max_iter=80,
+            tol=1e-3,
+            random_state=42,
+            verbose=1
+        ))
     ])
 
     pipe.fit(X_train, y_train)
@@ -118,8 +124,4 @@ def main(classifier_type="logreg"):
 
 
 if __name__ == "__main__":
-    import argparse
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--classifier", choices=["logreg", "mlp"], default="logreg")
-    args = ap.parse_args()
-    main(classifier_type=args.classifier)
+    main()

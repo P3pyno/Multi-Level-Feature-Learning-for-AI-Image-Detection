@@ -10,26 +10,12 @@ from scripts.branch1.branch1_extract import read_gray as b1_read_gray, extract_b
 from scripts.branch2.branch2_extract import read_gray as b2_read_gray, extract_branch2_handcrafted
 from scripts.branch2.branch2_cnn_extract import read_rgb, to_tensor, ResNetFeatureExtractor
 from scripts.branch3.branch3_train import semantic_distance_features
-from scripts.branch3.branch3_train_v2 import semantic_features as semantic_features_v2
 from scripts.fusion.gating import apply_branch_gates
 from scripts.project_paths import (
     BRANCH1_MODEL,
     BRANCH3_SEMANTIC_MODEL,
-    BRANCH3_SEMANTIC_V2_MODEL,
     FUSION_MODEL,
-    FUSION_V2_MODEL,
 )
-
-
-def split_quadrants(img):
-    w, h = img.size
-    w2, h2 = w // 2, h // 2
-    return [
-        img.crop((0, 0, w2, h2)),
-        img.crop((w2, 0, w, h2)),
-        img.crop((0, h2, w2, h)),
-        img.crop((w2, h2, w, h)),
-    ]
 
 
 def _load_clip_image_encoder(device):
@@ -94,37 +80,6 @@ def extract_branch3_semantic_single(image_path, b3_model_path):
     }
 
 
-def extract_branch3_semantic_v2_single(image_path, b3_model_path):
-    bundle = joblib.load(b3_model_path)
-    ref = bundle["reference"]
-
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    encode = _load_clip_image_encoder(device)
-
-    img = Image.open(image_path).convert("RGB")
-    global_emb = encode(img)
-
-    quads = split_quadrants(img)
-    quad_emb = np.stack([encode(q)[0] for q in quads], axis=0)[None, :, :]
-
-    feats = semantic_features_v2(global_emb, quad_emb, ref)[0]
-    return {
-        "b3_mahal": float(feats[0]),
-        "b3_knn_mean": float(feats[1]),
-        "b3_knn_min": float(feats[2]),
-        "b3_cos_centroid": float(feats[3]),
-        "b3_l2_centroid": float(feats[4]),
-        "b3_pair_mean": float(feats[5]),
-        "b3_pair_std": float(feats[6]),
-        "b3_pair_min": float(feats[7]),
-        "b3_pair_max": float(feats[8]),
-        "b3_gq_mean": float(feats[9]),
-        "b3_gq_std": float(feats[10]),
-        "b3_gq_min": float(feats[11]),
-        "b3_gq_max": float(feats[12]),
-    }
-
-
 def predict_branch1(image_path, model_path=BRANCH1_MODEL, size=256):
     model = joblib.load(model_path)
 
@@ -147,7 +102,6 @@ def predict_fusion_single(
     image_path,
     fusion_model_path=FUSION_MODEL,
     b3_model_path=BRANCH3_SEMANTIC_MODEL,
-    fusion_version="v1",
 ):
     fusion_bundle = joblib.load(fusion_model_path)
     if isinstance(fusion_bundle, dict) and "model" in fusion_bundle:
@@ -166,10 +120,7 @@ def predict_fusion_single(
     b2a = {f"b2a_{k}": v for k, v in extract_branch2_handcrafted(b2_img).items()}
 
     b2b = extract_branch2_cnn_single(image_path, arch="resnet50", size=224)
-    if fusion_version == "v2":
-        b3 = extract_branch3_semantic_v2_single(image_path, b3_model_path)
-    else:
-        b3 = extract_branch3_semantic_single(image_path, b3_model_path)
+    b3 = extract_branch3_semantic_single(image_path, b3_model_path)
 
     row = {}
     row.update(b1)
@@ -198,22 +149,18 @@ def main():
     ap = argparse.ArgumentParser(description="Single-image inference utility")
     ap.add_argument("image", type=str, help="Path to input image")
     ap.add_argument("--mode", choices=["branch1", "fusion"], default="fusion")
-    ap.add_argument("--fusion-version", choices=["v1", "v2"], default="v1")
     ap.add_argument("--branch1-model", type=str, default=str(BRANCH1_MODEL))
-    ap.add_argument("--fusion-model", type=str, default=None)
-    ap.add_argument("--branch3-model", type=str, default=None)
+    ap.add_argument("--fusion-model", type=str, default=str(FUSION_MODEL))
+    ap.add_argument("--branch3-model", type=str, default=str(BRANCH3_SEMANTIC_MODEL))
     args = ap.parse_args()
 
     if args.mode == "branch1":
         out = predict_branch1(args.image, model_path=args.branch1_model)
     else:
-        fusion_model = args.fusion_model or (str(FUSION_V2_MODEL) if args.fusion_version == "v2" else str(FUSION_MODEL))
-        branch3_model = args.branch3_model or (str(BRANCH3_SEMANTIC_V2_MODEL) if args.fusion_version == "v2" else str(BRANCH3_SEMANTIC_MODEL))
         out = predict_fusion_single(
             args.image,
-            fusion_model_path=fusion_model,
-            b3_model_path=branch3_model,
-            fusion_version=args.fusion_version,
+            fusion_model_path=args.fusion_model,
+            b3_model_path=args.branch3_model,
         )
 
     print(out)
