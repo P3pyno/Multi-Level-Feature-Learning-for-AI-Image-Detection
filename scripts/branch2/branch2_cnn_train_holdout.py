@@ -1,12 +1,12 @@
 import pandas as pd
 import joblib
-from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import SGDClassifier
 from sklearn.metrics import accuracy_score, roc_auc_score, classification_report, confusion_matrix
 
-from scripts.project_paths import BRANCH2_CNN_FEATURES_PARQUET, BRANCH2_CNN_SGD_MODEL
+from scripts.project_paths import BRANCH2_CNN_FEATURES_PARQUET, BRANCH2_CNN_SGD_MODEL, GLOBAL_SPLIT_JSON
+from scripts.split_utils import get_or_create_global_path_split
 
 DATA_PATH = BRANCH2_CNN_FEATURES_PARQUET
 OUT_MODEL = BRANCH2_CNN_SGD_MODEL
@@ -18,15 +18,18 @@ def main():
 
     X = df.drop(columns=["path", "label"])
     y = df["label"].values
+    paths = df["path"].values
 
     print("Splitting dataset...", flush=True)
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42, stratify=y
+    train_idx, test_idx = get_or_create_global_path_split(
+        paths=paths, labels=y, split_path=GLOBAL_SPLIT_JSON, test_size=0.2, random_state=42
     )
+    X_train, X_test = X.iloc[train_idx], X.iloc[test_idx]
+    y_train, y_test = y[train_idx], y[test_idx]
 
     print("Training classifier...", flush=True)
     pipe = Pipeline([
-        ("scaler", StandardScaler(with_mean=False)),
+        ("scaler", StandardScaler()),
         ("clf", SGDClassifier(
             loss="log_loss",
             max_iter=50,

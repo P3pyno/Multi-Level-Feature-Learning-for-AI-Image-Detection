@@ -1,7 +1,7 @@
 import sys
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split, StratifiedKFold, cross_val_score
+from sklearn.model_selection import StratifiedKFold, cross_validate
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
@@ -14,6 +14,8 @@ from sklearn.metrics import (
 import joblib
 
 from scripts.project_paths import BRANCH1_FEATURES_CLEAN_CSV, BRANCH1_MODEL
+from scripts.project_paths import GLOBAL_SPLIT_JSON
+from scripts.split_utils import get_or_create_global_path_split
 
 
 def load_data(path):
@@ -30,27 +32,29 @@ def load_data(path):
     if "label" not in df.columns:
         raise ValueError("Column 'label' not found!")
 
-    if "path" in df.columns:
-        X = df.drop(columns=["path", "label"])
-    else:
-        X = df.drop(columns=["label"])
+    if "path" not in df.columns:
+        raise ValueError("Column 'path' not found. Global split requires image paths.")
+
+    X = df.drop(columns=["path", "label"])
 
     y = df["label"].values
-
-    return X, y
+    paths = df["path"].values
+    return X, y, paths
 
 
 def train_and_eval(csv_path, out_model=BRANCH1_MODEL):
-    X, y = load_data(csv_path)
+    X, y, paths = load_data(csv_path)
 
     print("\nSplitting dataset...")
-    X_train, X_test, y_train, y_test = train_test_split(
-        X,
-        y,
+    train_idx, test_idx = get_or_create_global_path_split(
+        paths=paths,
+        labels=y,
+        split_path=GLOBAL_SPLIT_JSON,
         test_size=0.2,
         random_state=42,
-        stratify=y,
     )
+    X_train, X_test = X.iloc[train_idx], X.iloc[test_idx]
+    y_train, y_test = y[train_idx], y[test_idx]
 
     print("Train size:", len(X_train), "| Test size:", len(X_test))
 
@@ -74,29 +78,20 @@ def train_and_eval(csv_path, out_model=BRANCH1_MODEL):
 
     cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 
-    auc_scores = cross_val_score(
+    scores = cross_validate(
         pipe,
         X_train,
         y_train,
         cv=cv,
-        scoring="roc_auc",
-        n_jobs=-1,
-    )
-
-    acc_scores = cross_val_score(
-        pipe,
-        X_train,
-        y_train,
-        cv=cv,
-        scoring="accuracy",
+        scoring=["roc_auc", "accuracy"],
         n_jobs=-1,
     )
 
     print("\n5-fold CV ROC-AUC:")
-    print("mean =", auc_scores.mean(), "std =", auc_scores.std())
+    print("mean =", scores["test_roc_auc"].mean(), "std =", scores["test_roc_auc"].std())
 
     print("\n5-fold CV ACC:")
-    print("mean =", acc_scores.mean(), "std =", acc_scores.std())
+    print("mean =", scores["test_accuracy"].mean(), "std =", scores["test_accuracy"].std())
 
     print("\nTraining final model on full training set...")
 

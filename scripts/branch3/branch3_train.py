@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 import joblib
 
-from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
@@ -15,7 +14,9 @@ from scripts.project_paths import (
     BRANCH3_CLIP_META_CSV,
     BRANCH3_SEMANTIC_MODEL,
     BRANCH3_FEATURES_PARQUET,
+    GLOBAL_SPLIT_JSON,
 )
+from scripts.split_utils import get_or_create_global_path_split
 
 EMB_PATH = BRANCH3_CLIP_EMBEDDINGS_NPY
 META_PATH = BRANCH3_CLIP_META_CSV
@@ -70,9 +71,9 @@ def main():
     emb = l2_normalize(emb.astype(np.float32))
     y = meta["label"].values
 
-    idx = np.arange(len(y))
-    train_idx, test_idx = train_test_split(
-        idx, test_size=0.2, random_state=42, stratify=y
+    paths = meta["path"].values
+    train_idx, test_idx = get_or_create_global_path_split(
+        paths=paths, labels=y, split_path=GLOBAL_SPLIT_JSON, test_size=0.2, random_state=42
     )
 
     emb_train = emb[train_idx]
@@ -118,8 +119,7 @@ def main():
     print("\nSaved model:", OUT_MODEL, flush=True)
 
     print("\nSaving full semantic feature file for later fusion...", flush=True)
-    ref_all = fit_real_reference(emb[y == 0], k=5)
-    X_all = semantic_distance_features(emb, ref_all)
+    X_all = semantic_distance_features(emb, ref)
 
     full_df = meta.copy()
     full_df["b3_mahal"] = X_all[:, 0]
