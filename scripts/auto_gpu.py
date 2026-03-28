@@ -8,7 +8,10 @@ def get_free_gpus(memory_threshold_mb=500, util_threshold=10):
         "--query-gpu=index,memory.used,utilization.gpu",
         "--format=csv,noheader,nounits",
     ]
-    out = subprocess.check_output(cmd).decode("utf-8").strip().splitlines()
+    try:
+        out = subprocess.check_output(cmd).decode("utf-8").strip().splitlines()
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        return []
 
     free = []
     for line in out:

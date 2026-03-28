@@ -8,7 +8,7 @@ import torch
 import torch.nn.functional as F
 from torchvision import models
 
-from scripts.project_paths import DATA_DIR, BRANCH2_CNN_FEATURES_CSV
+from scripts.project_paths import DATA_DIR, BRANCH2_CNN_FEATURES_PARQUET
 
 IMG_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
 
@@ -130,7 +130,7 @@ def main(data_root, out_path, arch="resnet50", size=224, limit=None, batch_size=
     process(ai_imgs, 1)
 
     df = pd.DataFrame(rows)
-    df.to_csv(out_path, index=False)
+    df.to_parquet(out_path, index=False)
     print(f"Saved: {out_path}")
     print("Shape:", df.shape)
     print("Columns:", len(df.columns))
@@ -140,7 +140,7 @@ if __name__ == "__main__":
     import argparse
     ap = argparse.ArgumentParser()
     ap.add_argument("--data_root", type=str, default=str(DATA_DIR))
-    ap.add_argument("--out", type=str, default=str(BRANCH2_CNN_FEATURES_CSV))
+    ap.add_argument("--out", type=str, default=str(BRANCH2_CNN_FEATURES_PARQUET))
     ap.add_argument("--arch", type=str, default="resnet50", choices=["resnet18","resnet34","resnet50"])
     ap.add_argument("--size", type=int, default=224)
     ap.add_argument("--limit", type=int, default=None)

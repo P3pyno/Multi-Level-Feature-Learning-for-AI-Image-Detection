@@ -78,6 +78,10 @@ FUSION_MODEL = FUSION_MODELS_DIR / "fusion_sgd.joblib"
 FUSION_V2_MODEL = FUSION_MODELS_DIR / "fusion_v2_sgd.joblib"
 FUSION_TRAIN_V2_LOG = FUSION_LOGS_DIR / "fusion_train_v2.log"
 
+# Split files
+SPLITS_DIR = PROJECT_ROOT / "splits"
+GLOBAL_SPLIT_JSON = SPLITS_DIR / "global_path_split.json"
+
 # Temp files
 TEMP_DATASET_DICT_JSON = TEMP_DIR / "dataset_dict.json"
 TEMP_TRAIN_DIR = TEMP_DIR / "train"
@@ -91,6 +95,7 @@ def ensure_dirs():
         MODELS_DIR,
         LOGS_DIR,
         TEMP_DIR,
+        SPLITS_DIR,
         FUSION_INPUTS_DIR,
         BRANCH1_FEATURES_DIR,
         BRANCH2_FEATURES_DIR,
