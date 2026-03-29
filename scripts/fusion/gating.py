@@ -21,8 +21,6 @@ def fit_branch_gates(X: pd.DataFrame):
             branch_cols.setdefault("b2b", []).append(c)
         elif c.startswith("b3_"):
             branch_cols.setdefault("b3", []).append(c)
-        elif c.startswith("b4_"):
-            branch_cols.setdefault("b4", []).append(c)
 
     params = {"stats": {}, "branch_cols": branch_cols}
     for b, cols in branch_cols.items():

@@ -6,7 +6,6 @@ A multi-level feature learning framework for detecting AI-generated images using
 - **Branch 2A**: handcrafted texture features
 - **Branch 2B**: CNN embedding features
 - **Branch 3**: CLIP semantic distance features
-- **Branch 4**: perturbation-consistency features (JPEG/resize regeneration consistency)
 - **Fusion**: feature-level late fusion classifiers
 
 ## Project structure
@@ -14,7 +13,6 @@ A multi-level feature learning framework for detecting AI-generated images using
 - `scripts/branch1`: Branch 1 extraction/training
 - `scripts/branch2`: Branch 2 extraction/training
 - `scripts/branch3`: Branch 3 extraction/training
-- `scripts/branch4`: Branch 4 extraction/training
 - `scripts/fusion`: fusion model training
 - `scripts/project_paths.py`: centralized paths and artifacts
 - `scripts/split_utils.py`: shared global train/test split logic
@@ -75,25 +73,9 @@ python scripts/project_paths.py
    python -m scripts.fusion.fusion_train_v2 --classifier mlp
    ```
 
-5. **Branch 4 (optional innovation branch)**
-   ```bash
-   python -m scripts.branch4.branch4_extract
-   python -m scripts.branch4.branch4_train
-   ```
-
 ## Reproducibility note
 
 All training scripts now reuse a shared global split file at `splits/global_path_split.json` to reduce cross-branch split drift and leakage.
-
-## Latest updates
-
-- Added package markers (`scripts/__init__.py` and branch/fusion `__init__.py`) so module imports are stable across environments.
-- Added Branch-4 perturbation-consistency pipeline:
-  - `scripts.branch4.branch4_extract`
-  - `scripts.branch4.branch4_train`
-- Updated fusion gating to include `b4_` prefixed features when Branch-4 is present.
-- Updated `scripts.fusion.fusion_train_v2` to merge Branch-4 features automatically when `features/branch4/branch4_features.csv` exists.
-- Added inference abstention in `scripts.predict` via `--abstain-threshold`.
 
 ## Inference
 
@@ -107,12 +89,7 @@ Fusion-v2 inference:
 
 ```bash
 python -m scripts.predict /path/to/image.jpg --mode fusion --fusion-version v2
-```
-
-Use abstention for uncertain predictions:
-
-```bash
-python -m scripts.predict /path/to/image.jpg --mode fusion --fusion-version v2 --abstain-threshold 0.60
+python -m scripts.predict /path/to/image.jpg --mode fusion --fusion-model models/fusion/fusion_sgd.joblib --branch3-model models/branch3/branch3_semantic_lr.joblib
 ```
 
 Or run Branch-1 only:

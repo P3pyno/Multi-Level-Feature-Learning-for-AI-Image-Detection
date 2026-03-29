@@ -1,6 +1,5 @@
 import pandas as pd
 import joblib
-from pathlib import Path
 
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
@@ -44,7 +43,6 @@ def main(data_path=BRANCH4_FEATURES_CSV, out_model=BRANCH4_MODEL):
     print("\nClassification Report:", flush=True)
     print(classification_report(y_test, y_pred, digits=4), flush=True)
 
-    Path(out_model).parent.mkdir(parents=True, exist_ok=True)
     joblib.dump(pipe, out_model)
     print("Saved model:", out_model, flush=True)
 

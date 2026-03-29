@@ -1,6 +1,5 @@
 import io
 import os
-from pathlib import Path
 
 import cv2
 import numpy as np
@@ -97,7 +96,6 @@ def main(data_root, out_path, size=256, limit=None):
                 print(f"[WARN] {p}: {e}")
 
     df = pd.DataFrame(rows)
-    Path(out_path).parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(out_path, index=False)
     print(f"Saved: {out_path}")
     print("Shape:", df.shape)

@@ -33,12 +33,6 @@ def prefix_features(df, prefix):
     return df.rename(columns={c: f"{prefix}{c}" for c in feat_cols})
 
 
-def build_classifier(classifier_type):
-    if classifier_type == "mlp":
-        return MLPClassifier(hidden_layer_sizes=(128,), activation="relu", max_iter=400, random_state=42)
-    return SGDClassifier(loss="log_loss", max_iter=60, tol=1e-3, random_state=42, verbose=1)
-
-
 def main(classifier_type="logreg"):
     print("Loading Branch 1...", flush=True)
     b1 = prefix_features(pd.read_csv(BRANCH1_PATH), "b1_")
@@ -88,7 +82,13 @@ def main(classifier_type="logreg"):
     pipe = Pipeline([
         ("imputer", SimpleImputer(strategy="median")),
         ("scaler", StandardScaler()),
-        ("clf", build_classifier(classifier_type))
+        ("clf", SGDClassifier(
+            loss="log_loss",
+            max_iter=60,
+            tol=1e-3,
+            random_state=42,
+            verbose=1
+        ))
     ])
 
     pipe.fit(X_train, y_train)
@@ -114,8 +114,4 @@ def main(classifier_type="logreg"):
 
 
 if __name__ == "__main__":
-    import argparse
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--classifier", choices=["logreg", "mlp"], default="logreg")
-    args = ap.parse_args()
-    main(classifier_type=args.classifier)
+    main()
