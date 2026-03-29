@@ -1,96 +1,94 @@
 import pandas as pd
-import numpy as np
 import joblib
 
-from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import SGDClassifier
+from sklearn.neural_network import MLPClassifier
 from sklearn.metrics import accuracy_score, roc_auc_score, classification_report, confusion_matrix
 
 from scripts.project_paths import (
-    BRANCH1_FEATURES_CLEAN,
+    BRANCH1_FEATURES_CLEAN_CSV,
     BRANCH2_FEATURES_CSV,
     BRANCH2_CNN_FEATURES_PARQUET,
+    BRANCH3_FEATURES_PARQUET,
     FUSION_MODEL,
+    GLOBAL_SPLIT_JSON,
 )
+from scripts.split_utils import get_or_create_global_path_split
+from scripts.fusion.gating import fit_branch_gates, apply_branch_gates
 
 
-BRANCH1_PATH = BRANCH1_FEATURES_CLEAN
+BRANCH1_PATH = BRANCH1_FEATURES_CLEAN_CSV
 BRANCH2A_PATH = BRANCH2_FEATURES_CSV
 BRANCH2B_PATH = BRANCH2_CNN_FEATURES_PARQUET
+BRANCH3_PATH = BRANCH3_FEATURES_PARQUET
 OUT_MODEL = FUSION_MODEL
+USE_BRANCH_GATING = True
 
 
-def load_branch1():
-    df = pd.read_csv(BRANCH1_PATH)
-    keep = ["path", "label"] + [c for c in df.columns if c not in ["path", "label"]]
-    df = df[keep].copy()
+def prefix_features(df, prefix):
     feat_cols = [c for c in df.columns if c not in ["path", "label"]]
-    df = df.rename(columns={c: f"b1_{c}" for c in feat_cols})
-    return df
+    return df.rename(columns={c: f"{prefix}{c}" for c in feat_cols})
 
 
-def load_branch2a():
-    df = pd.read_csv(BRANCH2A_PATH)
-    keep = ["path", "label"] + [c for c in df.columns if c not in ["path", "label"]]
-    df = df[keep].copy()
-    feat_cols = [c for c in df.columns if c not in ["path", "label"]]
-    df = df.rename(columns={c: f"b2a_{c}" for c in feat_cols})
-    return df
+def build_classifier(classifier_type):
+    if classifier_type == "mlp":
+        return MLPClassifier(hidden_layer_sizes=(128,), activation="relu", max_iter=400, random_state=42)
+    return SGDClassifier(loss="log_loss", max_iter=60, tol=1e-3, random_state=42, verbose=1)
 
 
-def load_branch2b():
-    df = pd.read_parquet(BRANCH2B_PATH)
-    keep = ["path", "label"] + [c for c in df.columns if c not in ["path", "label"]]
-    df = df[keep].copy()
-    feat_cols = [c for c in df.columns if c not in ["path", "label"]]
-    df = df.rename(columns={c: f"b2b_{c}" for c in feat_cols})
-    return df
-
-
-def main():
+def main(classifier_type="logreg"):
     print("Loading Branch 1...", flush=True)
-    b1 = load_branch1()
+    b1 = prefix_features(pd.read_csv(BRANCH1_PATH), "b1_")
     print("Branch 1:", b1.shape, flush=True)
 
     print("Loading Branch 2A...", flush=True)
-    b2a = load_branch2a()
+    b2a = prefix_features(pd.read_csv(BRANCH2A_PATH), "b2a_")
     print("Branch 2A:", b2a.shape, flush=True)
 
     print("Loading Branch 2B...", flush=True)
-    b2b = load_branch2b()
+    b2b = prefix_features(pd.read_parquet(BRANCH2B_PATH), "b2b_")
     print("Branch 2B:", b2b.shape, flush=True)
+
+    print("Loading Branch 3 semantic features...", flush=True)
+    b3 = pd.read_parquet(BRANCH3_PATH)
+    print("Branch 3:", b3.shape, flush=True)
 
     print("Merging datasets on path...", flush=True)
     df = b1.merge(b2a, on=["path", "label"], how="inner")
     df = df.merge(b2b, on=["path", "label"], how="inner")
+    df = df.merge(b3, on=["path", "label"], how="inner")
     print("Merged shape:", df.shape, flush=True)
 
     X = df.drop(columns=["path", "label"])
     y = df["label"].values
+    paths = df["path"].values
 
     nan_total = int(X.isna().sum().sum())
     print("Total NaNs in fused features:", nan_total, flush=True)
 
     print("Splitting dataset...", flush=True)
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42, stratify=y
+    train_idx, test_idx = get_or_create_global_path_split(
+        paths=paths, labels=y, split_path=GLOBAL_SPLIT_JSON, test_size=0.2, random_state=42
     )
+    X_train, X_test = X.iloc[train_idx], X.iloc[test_idx]
+    y_train, y_test = y[train_idx], y[test_idx]
     print(f"Train size: {len(X_train)} | Test size: {len(X_test)}", flush=True)
+
+    gate_params = None
+    if USE_BRANCH_GATING:
+        print("Applying optional branch-level gating...", flush=True)
+        gate_params = fit_branch_gates(X_train)
+        X_train = apply_branch_gates(X_train, gate_params)
+        X_test = apply_branch_gates(X_test, gate_params)
 
     print("Training fusion classifier...", flush=True)
     pipe = Pipeline([
         ("imputer", SimpleImputer(strategy="median")),
-        ("scaler", StandardScaler(with_mean=False)),
-        ("clf", SGDClassifier(
-            loss="log_loss",
-            max_iter=60,
-            tol=1e-3,
-            random_state=42,
-            verbose=1
-        ))
+        ("scaler", StandardScaler()),
+        ("clf", build_classifier(classifier_type))
     ])
 
     pipe.fit(X_train, y_train)
@@ -111,9 +109,13 @@ def main():
     print("\nClassification Report:", flush=True)
     print(classification_report(y_test, y_pred, digits=4), flush=True)
 
-    joblib.dump(pipe, OUT_MODEL)
-    print("\nSaved model:", OUT_MODEL, flush=True)
+    joblib.dump({"model": pipe, "use_branch_gating": USE_BRANCH_GATING, "gate_params": gate_params}, OUT_MODEL)
+    print("\nSaved model bundle:", OUT_MODEL, flush=True)
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--classifier", choices=["logreg", "mlp"], default="logreg")
+    args = ap.parse_args()
+    main(classifier_type=args.classifier)

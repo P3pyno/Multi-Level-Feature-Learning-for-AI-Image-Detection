@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 import joblib
 
-from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import SGDClassifier
@@ -13,7 +12,9 @@ from scripts.project_paths import (
     BRANCH3_CLIP_V2_META_CSV,
     BRANCH3_RAW_CLIP_MODEL,
     BRANCH3_RAW_FEATURES_PARQUET,
+    GLOBAL_SPLIT_JSON,
 )
+from scripts.split_utils import get_or_create_global_path_split
 
 EMB_PATH = BRANCH3_CLIP_V2_GLOBAL_NPY
 META_PATH = BRANCH3_CLIP_V2_META_CSV
@@ -38,9 +39,12 @@ def main():
 
     print("Embedding shape:", emb.shape, flush=True)
 
-    X_train, X_test, y_train, y_test = train_test_split(
-        emb, y, test_size=0.2, random_state=42, stratify=y
+    paths = meta["path"].values
+    train_idx, test_idx = get_or_create_global_path_split(
+        paths=paths, labels=y, split_path=GLOBAL_SPLIT_JSON, test_size=0.2, random_state=42
     )
+    X_train, X_test = emb[train_idx], emb[test_idx]
+    y_train, y_test = y[train_idx], y[test_idx]
 
     print("Train size:", len(X_train), "| Test size:", len(X_test), flush=True)
 
