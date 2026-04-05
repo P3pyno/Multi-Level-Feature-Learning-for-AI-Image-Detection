@@ -7,11 +7,22 @@
 
 A multi-level feature learning framework for detecting AI-generated images using:
 
-- **Branch 1**: forensic frequency/noise features
-- **Branch 2A**: handcrafted texture features
-- **Branch 2B**: CNN embedding features
-- **Branch 3**: CLIP semantic distance features
-- **Fusion**: feature-level late fusion classifiers
+- Frequency-domain forensic features (FFT / DCT)
+- Handcrafted texture descriptors
+- CNN embeddings
+- CLIP semantic representations
+- Late feature fusion classifiers
+
+## Results
+
+The proposed multi-branch fusion pipeline improves robustness by combining low-level forensic signals with high-level semantic consistency features.
+
+Evaluation includes:
+
+- Confusion matrices
+- ROC curves
+- Cross-branch comparisons
+- Fusion performance improvements
 
 ## Project structure
 
