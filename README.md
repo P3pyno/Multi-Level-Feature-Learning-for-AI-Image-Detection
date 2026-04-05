@@ -97,7 +97,3 @@ Or run Branch-1 only:
 ```bash
 python -m scripts.predict /path/to/image.jpg --mode branch1 --branch1-model models/branch1/branch1_lr.joblib
 ```
-
-## Repository health report
-
-See [`PROJECT_CHECK.md`](PROJECT_CHECK.md).
