@@ -1,4 +1,9 @@
 # Multi-Level-Feature-Learning-for-AI-Image-Detection
+## Example Outputs
+
+![Performance Comparison](figures/performance_comparison.png)
+
+![Performance trend](figures/performance_trend.png)
 
 A multi-level feature learning framework for detecting AI-generated images using:
 
